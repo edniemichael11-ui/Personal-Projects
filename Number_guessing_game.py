@@ -20,7 +20,7 @@ while True:
     if Attempt == 5:
         print("You have ran out of lives")
         print(f"The number was {secret_number}")
-    
+        break #Add if they want to play again
 
 
 
