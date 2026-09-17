@@ -114,7 +114,7 @@ while True:
         action = ""
         action = input("Actions: ").strip().capitalize()
         if action == "A":
-            print("You find a Map of the surrounding area")
+            print("You find a Map of the nearby Village") #To be named
             map = True
             print("With this campsite looted and a map in hand you now decide to head to the nearby village")
             break
@@ -128,4 +128,5 @@ while True:
 
 clear_screen()
 print("You head to the Village")
+
 
