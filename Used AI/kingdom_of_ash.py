@@ -1,1763 +1,2730 @@
-import os
+# Kingdom of Ash — Expanded Edition
+# Text-based medieval fantasy RPG
+# Requires Python 3.10+ and Tkinter
+
+import tkinter as tk
+from tkinter import messagebox
 import json
-import time
+import os
 import random
 
 SAVE_FILE = "kingdom_of_ash_save.json"
 
 
 # ============================================================
-#                    UTILITY FUNCTIONS
+# GAME DATA
 # ============================================================
 
-def clear():
-    os.system("cls" if os.name == "nt" else "clear")
+ITEMS = {
+    "Potion": {
+        "type": "consumable",
+        "price": 25,
+        "description": "Restores 40 HP."
+    },
+    "Elixir": {
+        "type": "consumable",
+        "price": 60,
+        "description": "Restores 100 HP."
+    },
+    "Mana Tonic": {
+        "type": "consumable",
+        "price": 45,
+        "description": "Restores 35 MP."
+    },
+    "Antidote": {
+        "type": "consumable",
+        "price": 30,
+        "description": "Cures poison."
+    },
+
+    "Iron Sword": {
+        "type": "weapon",
+        "price": 80,
+        "strength": 3,
+        "description": "A dependable iron sword."
+    },
+    "Knight's Longsword": {
+        "type": "weapon",
+        "price": 180,
+        "strength": 8,
+        "description": "A finely balanced knight's blade."
+    },
+    "Moonsteel Blade": {
+        "type": "weapon",
+        "price": 350,
+        "strength": 14,
+        "magic": 4,
+        "description": "A blade forged from pale moonsteel."
+    },
+    "Dragonfang": {
+        "type": "weapon",
+        "price": 700,
+        "strength": 22,
+        "magic": 8,
+        "description": "A legendary blade forged after the dragon wars."
+    },
+
+    "Traveler's Coat": {
+        "type": "armor",
+        "price": 60,
+        "defense": 2,
+        "description": "Light armor worn by travelers."
+    },
+    "Guard Armor": {
+        "type": "armor",
+        "price": 150,
+        "defense": 6,
+        "description": "Standard royal guard armor."
+    },
+    "Runic Plate": {
+        "type": "armor",
+        "price": 300,
+        "defense": 12,
+        "magic": 3,
+        "description": "Heavy armor covered in protective runes."
+    },
+    "Dragon Mail": {
+        "type": "armor",
+        "price": 650,
+        "defense": 20,
+        "magic": 7,
+        "description": "Armor designed to withstand dragonfire."
+    }
+}
 
 
-def pause():
-    input("\nPress ENTER to continue...")
+SPELLS = {
+    "Ember": {
+        "cost": 5,
+        "power": 18,
+        "description": "A quick burst of flame."
+    },
+    "Frost Lance": {
+        "cost": 8,
+        "power": 28,
+        "description": "A piercing bolt of ice."
+    },
+    "Thunder": {
+        "cost": 12,
+        "power": 42,
+        "description": "Calls down a powerful lightning strike."
+    },
+    "Mending Light": {
+        "cost": 10,
+        "heal": 45,
+        "description": "Restores HP."
+    },
+    "Flame Wall": {
+        "cost": 15,
+        "power": 35,
+        "burn": True,
+        "description": "Damages the enemy and may burn them."
+    },
+    "Starfall": {
+        "cost": 25,
+        "power": 75,
+        "description": "A devastating late-game spell."
+    }
+}
 
 
-def slow(text, delay=0.012):
-    """Print text with a typewriter effect."""
-    for char in text:
-        print(char, end="", flush=True)
-        time.sleep(delay)
-    print()
-
-
-def title(text):
-    clear()
-    print("=" * 72)
-    print(text.center(72))
-    print("=" * 72)
-    print()
-
-
-def choose(prompt, options):
-    while True:
-        print()
-        print(prompt)
-
-        for i, option in enumerate(options, 1):
-            print(f"  [{i}] {option}")
-
-        answer = input("\n> ").strip()
-
-        if answer.isdigit():
-            number = int(answer)
-            if 1 <= number <= len(options):
-                return number
-
-        print("Please enter one of the listed numbers.")
-
-
-def wait():
-    time.sleep(0.8)
+ENEMIES = {
+    "Dire Wolf": {
+        "hp": 45,
+        "attack": 9,
+        "defense": 2,
+        "xp": 20,
+        "gold": 12
+    },
+    "Cave Spider": {
+        "hp": 60,
+        "attack": 11,
+        "defense": 4,
+        "xp": 30,
+        "gold": 18,
+        "poison": True
+    },
+    "Forest Bandit": {
+        "hp": 70,
+        "attack": 13,
+        "defense": 5,
+        "xp": 40,
+        "gold": 30
+    },
+    "Highwayman": {
+        "hp": 85,
+        "attack": 15,
+        "defense": 7,
+        "xp": 55,
+        "gold": 40
+    },
+    "Ash Cultist": {
+        "hp": 90,
+        "attack": 16,
+        "defense": 8,
+        "xp": 65,
+        "gold": 50
+    },
+    "Ruined Shade": {
+        "hp": 110,
+        "attack": 18,
+        "defense": 10,
+        "xp": 80,
+        "gold": 65
+    },
+    "Fallen Knight": {
+        "hp": 140,
+        "attack": 21,
+        "defense": 13,
+        "xp": 110,
+        "gold": 80
+    },
+    "Stone Golem": {
+        "hp": 190,
+        "attack": 25,
+        "defense": 20,
+        "xp": 160,
+        "gold": 110
+    },
+    "Ash Warlord": {
+        "hp": 250,
+        "attack": 29,
+        "defense": 18,
+        "xp": 250,
+        "gold": 180
+    },
+    "Cinder Witch": {
+        "hp": 220,
+        "attack": 32,
+        "defense": 15,
+        "xp": 230,
+        "gold": 160
+    },
+    "Royal Enforcer": {
+        "hp": 180,
+        "attack": 27,
+        "defense": 17,
+        "xp": 190,
+        "gold": 130
+    },
+    "Ancient Knight": {
+        "hp": 300,
+        "attack": 34,
+        "defense": 24,
+        "xp": 350,
+        "gold": 250
+    },
+    "The Ash Dragon": {
+        "hp": 450,
+        "attack": 42,
+        "defense": 28,
+        "xp": 600,
+        "gold": 500,
+        "boss": True,
+        "no_flee": True
+    },
+    "Elder Ash Dragon": {
+        "hp": 650,
+        "attack": 50,
+        "defense": 34,
+        "xp": 1000,
+        "gold": 1000,
+        "boss": True,
+        "no_flee": True
+    }
+}
 
 
 # ============================================================
-#                    PLAYER DATA
+# STORY
+# ============================================================
+
+S = {
+
+    "intro": {
+        "title": "Kingdom of Ash",
+        "text": (
+            "The kingdom of Eldoria was once known for its golden towers, "
+            "quiet forests, and ancient knights.\n\n"
+            "Then the bells began to ring.\n\n"
+            "Ash started falling from the sky.\n"
+            "Villages disappeared.\n"
+            "And somewhere beyond the northern mountains, something ancient awakened.\n\n"
+            "You are a wandering warrior with little more than a sword and a name.\n"
+            "Tonight, your journey begins in the village of Blackthorne."
+        ),
+        "choices": [
+            ("Enter Blackthorne", "chapter1")
+        ]
+    },
+
+    "chapter1": {
+        "title": "Chapter I — The Bell of Blackthorne",
+        "text": (
+            "You arrive at Blackthorne just before sunset.\n\n"
+            "The village is strangely quiet.\n"
+            "A huge bell hangs above the town square, but no one is ringing it.\n\n"
+            "An old woman approaches you.\n\n"
+            "\"Stranger... if you have a sword, we need you.\""
+        ),
+        "choices": [
+            ("Ask what happened", "chapter1_question"),
+            ("Offer to help immediately", "chapter1_help"),
+            ("Ask for payment", "chapter1_payment")
+        ]
+    },
+
+    "chapter1_question": {
+        "title": "The Ashmark",
+        "text": (
+            "The woman explains that several villagers vanished during the night.\n\n"
+            "Before they disappeared, strange symbols appeared on their doors.\n\n"
+            "She points toward the forest.\n\n"
+            "\"The mark came from there.\""
+        ),
+        "choices": [
+            ("Investigate the forest", "chapter2"),
+            ("Search the village first", "village_search")
+        ]
+    },
+
+    "chapter1_help": {
+        "title": "A Promise",
+        "text": (
+            "You agree to help.\n\n"
+            "The woman smiles with relief.\n\n"
+            "\"Then perhaps Eldoria still has heroes.\""
+        ),
+        "choices": [
+            ("Enter the forest", "chapter2")
+        ],
+        "effects": [
+            ("flag", "helped", True)
+        ]
+    },
+
+    "chapter1_payment": {
+        "title": "A Mercenary's Question",
+        "text": (
+            "The woman looks disappointed.\n\n"
+            "\"Gold is scarce. But if you survive the forest, "
+            "perhaps the village can repay you.\""
+        ),
+        "choices": [
+            ("Accept", "chapter2"),
+            ("Refuse and leave", "bad_end")
+        ]
+    },
+
+    "village_search": {
+        "title": "Searching Blackthorne",
+        "text": (
+            "You search the village before leaving.\n\n"
+            "Behind the old chapel, you discover a hidden cellar.\n\n"
+            "Inside is a small chest containing supplies and an old map."
+        ),
+        "choices": [
+            ("Take the supplies", "chapter2")
+        ],
+        "effects": [
+            ("item", "Potion", 2),
+            ("gold", 30)
+        ]
+    },
+
+    "chapter2": {
+        "title": "Chapter II — The Forest Road",
+        "text": (
+            "The forest grows darker with every step.\n\n"
+            "Ash covers the leaves.\n\n"
+            "Then you hear a growl."
+        ),
+        "battle": "Dire Wolf",
+        "choices": [
+            ("Continue", "forest_after_battle")
+        ]
+    },
+
+    "forest_after_battle": {
+        "title": "A Stranger in the Woods",
+        "text": (
+            "After the battle, you discover another traveler nearby.\n\n"
+            "Her name is Mara.\n\n"
+            "She carries a bow and wears the crest of the old royal scouts.\n\n"
+            "\"You should not be here,\" she says."
+        ),
+        "choices": [
+            ("Trust Mara", "mara_trust"),
+            ("Keep your distance", "mara_doubt"),
+            ("Ask about the royal crest", "mara_question")
+        ]
+    },
+
+    "mara_trust": {
+        "title": "Mara",
+        "text": (
+            "Mara agrees to travel with you.\n\n"
+            "\"Whatever is happening in Eldoria, "
+            "we are going to find the truth.\""
+        ),
+        "choices": [
+            ("Travel together", "chapter3")
+        ],
+        "effects": [
+            ("flag", "mara", True)
+        ]
+    },
+
+    "mara_doubt": {
+        "title": "Two Paths",
+        "text": (
+            "Mara watches you carefully.\n\n"
+            "\"Fair enough. We can still travel in the same direction.\""
+        ),
+        "choices": [
+            ("Continue", "chapter3")
+        ]
+    },
+
+    "mara_question": {
+        "title": "The Royal Scouts",
+        "text": (
+            "Mara explains that the royal scouts disappeared years ago.\n\n"
+            "\"Someone has been using their old routes to move soldiers "
+            "through the forest.\""
+        ),
+        "choices": [
+            ("Ask who is behind it", "chapter3"),
+            ("Move on", "chapter3")
+        ],
+        "effects": [
+            ("flag", "truth", True)
+        ]
+    },
+
+    "chapter3": {
+        "title": "Chapter III — The Ashen Ruins",
+        "text": (
+            "Deep inside the forest you discover ancient ruins.\n\n"
+            "A cracked stone door leads underground.\n\n"
+            "The walls are covered with paintings of dragons."
+        ),
+        "choices": [
+            ("Enter the ruins", "ruins_enter"),
+            ("Search the outside", "ruins_search")
+        ]
+    },
+
+    "ruins_search": {
+        "title": "The Fallen Shrine",
+        "text": (
+            "Behind the ruins you find a small shrine.\n\n"
+            "Inside is a glowing crystal."
+        ),
+        "choices": [
+            ("Take the crystal", "ruins_enter")
+        ],
+        "effects": [
+            ("item", "Potion", 1),
+            ("flag", "crystal", True)
+        ]
+    },
+
+    "ruins_enter": {
+        "title": "The Ruins Below",
+        "text": (
+            "You descend into the ruins.\n\n"
+            "A shadow moves between the pillars."
+        ),
+        "battle": "Ruined Shade",
+        "choices": [
+            ("Continue deeper", "ruins_deep")
+        ]
+    },
+
+    "ruins_deep": {
+        "title": "The Dragon Tablet",
+        "text": (
+            "At the center of the chamber stands a stone tablet.\n\n"
+            "It describes an ancient pact between the royal family "
+            "and the dragons of Eldoria.\n\n"
+            "The pact was broken generations ago."
+        ),
+        "choices": [
+            ("Study the tablet", "chapter4"),
+            ("Destroy the tablet", "chapter4")
+        ],
+        "effects": [
+            ("flag", "pact", True)
+        ]
+    },
+
+    "chapter4": {
+        "title": "Chapter IV — City of Crowns",
+        "text": (
+            "You arrive at the capital city.\n\n"
+            "The gates are heavily guarded.\n\n"
+            "The royal banners still fly above the walls, "
+            "but something about the city feels wrong."
+        ),
+        "choices": [
+            ("Enter through the main gate", "capital_gate"),
+            ("Sneak through the old tunnels", "capital_stealth")
+        ]
+    },
+
+    "capital_gate": {
+        "title": "The Royal Guard",
+        "text": (
+            "The guards stop you.\n\n"
+            "\"State your business.\""
+        ),
+        "choices": [
+            ("Tell the truth", "capital_truth"),
+            ("Lie about being a messenger", "capital_lie")
+        ]
+    },
+
+    "capital_truth": {
+        "title": "A Dangerous Truth",
+        "text": (
+            "You tell the guards about the ruins.\n\n"
+            "Their expressions change.\n\n"
+            "One guard quietly says:\n\n"
+            "\"You need to speak with Lord Varick.\""
+        ),
+        "choices": [
+            ("Meet Lord Varick", "chapter5")
+        ]
+    },
+
+    "capital_lie": {
+        "title": "The Messenger",
+        "text": (
+            "Your story almost works.\n\n"
+            "But one guard notices the ash on your equipment."
+        ),
+        "battle": "Royal Enforcer",
+        "choices": [
+            ("Escape into the city", "chapter5")
+        ]
+    },
+
+    "capital_stealth": {
+        "title": "The Old Tunnels",
+        "text": (
+            "You use an abandoned tunnel beneath the city walls.\n\n"
+            "The tunnel leads directly beneath the royal palace."
+        ),
+        "choices": [
+            ("Enter the palace", "chapter5")
+        ],
+        "effects": [
+            ("flag", "stealth", True)
+        ]
+    },
+
+    "chapter5": {
+        "title": "Chapter V — The King's Secret",
+        "text": (
+            "Lord Varick meets you in a private chamber.\n\n"
+            "\"The king is dead,\" he says.\n\n"
+            "\"But that is not the greatest danger.\""
+        ),
+        "choices": [
+            ("Ask about the dragons", "dragon_secret"),
+            ("Ask about the missing villagers", "villager_secret"),
+            ("Demand the truth", "truth_secret")
+        ]
+    },
+
+    "dragon_secret": {
+        "title": "The Dragon Pact",
+        "text": (
+            "Varick reveals that the royal family once controlled "
+            "the dragons through an ancient pact.\n\n"
+            "\"Someone is trying to restore that pact.\""
+        ),
+        "choices": [
+            ("Continue", "chapter6")
+        ],
+        "effects": [
+            ("flag", "secret", True)
+        ]
+    },
+
+    "villager_secret": {
+        "title": "The Missing",
+        "text": (
+            "The villagers were taken because someone believes "
+            "they carry traces of an ancient royal bloodline."
+        ),
+        "choices": [
+            ("Continue", "chapter6")
+        ],
+        "effects": [
+            ("flag", "document", True)
+        ]
+    },
+
+    "truth_secret": {
+        "title": "The Hidden Heir",
+        "text": (
+            "Varick finally reveals the secret.\n\n"
+            "\"The royal bloodline did not end with the king.\""
+        ),
+        "choices": [
+            ("Ask who the heir is", "heir_secret")
+        ]
+    },
+
+    "heir_secret": {
+        "title": "The Heir",
+        "text": (
+            "Varick looks directly at you.\n\n"
+            "\"You are standing in front of them.\""
+        ),
+        "choices": [
+            ("Accept your heritage", "chapter6"),
+            ("Reject the crown", "chapter6")
+        ],
+        "effects": [
+            ("flag", "heir", True)
+        ]
+    },
+
+    "chapter6": {
+        "title": "Chapter VI — War of Ash",
+        "text": (
+            "The capital falls into chaos.\n\n"
+            "Ash storms roll across the sky.\n\n"
+            "An army marches toward the city."
+        ),
+        "choices": [
+            ("Defend the city", "war_defend"),
+            ("Seek the source of the attack", "war_source"),
+            ("Escape the city", "war_escape")
+        ]
+    },
+
+    "war_defend": {
+        "title": "The City Gate",
+        "text": (
+            "You stand at the gate as the enemy approaches."
+        ),
+        "battle": "Ash Warlord",
+        "choices": [
+            ("Continue", "chapter7")
+        ]
+    },
+
+    "war_source": {
+        "title": "The Witch of Cinders",
+        "text": (
+            "You track the magic behind the ash storms to an ancient tower."
+        ),
+        "battle": "Cinder Witch",
+        "choices": [
+            ("Continue", "chapter7")
+        ]
+    },
+
+    "war_escape": {
+        "title": "Leaving the Capital",
+        "text": (
+            "You escape through the eastern road.\n\n"
+            "Behind you, the capital disappears beneath the ash."
+        ),
+        "choices": [
+            ("Keep going", "chapter7")
+        ]
+    },
+
+    "chapter7": {
+        "title": "Chapter VII — The Elder",
+        "text": (
+            "Beyond the mountains lies a forgotten temple.\n\n"
+            "An ancient dragon waits inside.\n\n"
+            "It speaks without moving its mouth.\n\n"
+            "\"The kingdom has forgotten its promise.\""
+        ),
+        "choices": [
+            ("Listen", "elder_listen"),
+            ("Attack", "elder_attack")
+        ]
+    },
+
+    "elder_listen": {
+        "title": "The Old Pact",
+        "text": (
+            "The dragon explains that the royal family broke the ancient pact.\n\n"
+            "Now the dragons are deciding whether humanity deserves another chance."
+        ),
+        "choices": [
+            ("Accept the dragon's terms", "chapter8"),
+            ("Reject the pact", "chapter8")
+        ],
+        "effects": [
+            ("flag", "dragon_pact", True)
+        ]
+    },
+
+    "elder_attack": {
+        "title": "Ancient Guardian",
+        "text": (
+            "The guardian awakens.\n\n"
+            "Its power fills the temple."
+        ),
+        "battle": "Ancient Knight",
+        "choices": [
+            ("Continue", "chapter8")
+        ]
+    },
+
+    "chapter8": {
+        "title": "Chapter VIII — The Last Bell",
+        "text": (
+            "You return to the ruins beneath the capital.\n\n"
+            "At the center of the chamber is the final bell.\n\n"
+            "The bell can either restore the kingdom's ancient pact "
+            "or break it forever."
+        ),
+        "choices": [
+            ("Ring the bell", "ending_dragon"),
+            ("Destroy the bell", "ending_ruler"),
+            ("Let the council decide", "ending_council"),
+            ("Walk away", "ending_guardian")
+        ]
+    },
+
+    "ending_dragon": {
+        "title": "Ending — The Dragon Crown",
+        "text": (
+            "You ring the bell.\n\n"
+            "The sound travels across Eldoria.\n\n"
+            "Dragons descend from the mountains, but they do not attack.\n\n"
+            "The ancient pact is restored.\n\n"
+            "Eldoria enters a new age where humans and dragons "
+            "must learn to live beside one another."
+        ),
+        "choices": [
+            ("Face the final guardian", "final_dragon")
+        ]
+    },
+
+    "ending_ruler": {
+        "title": "Ending — The New Crown",
+        "text": (
+            "You destroy the bell.\n\n"
+            "The old magic fades.\n\n"
+            "Without the ancient pact, the kingdom becomes free "
+            "from the influence of the dragons.\n\n"
+            "But someone must rebuild Eldoria."
+        ),
+        "choices": [
+            ("Face the final guardian", "final_dragon")
+        ]
+    },
+
+    "ending_council": {
+        "title": "Ending — The Council",
+        "text": (
+            "You refuse to decide the fate of the kingdom alone.\n\n"
+            "The surviving nobles and villagers form a council.\n\n"
+            "For the first time in generations, Eldoria is ruled "
+            "through cooperation rather than a single crown."
+        ),
+        "choices": [
+            ("Face the final guardian", "final_dragon")
+        ]
+    },
+
+    "ending_guardian": {
+        "title": "Ending — The Wandering Guardian",
+        "text": (
+            "You leave the ruins behind.\n\n"
+            "You never take the throne.\n\n"
+            "Instead, you travel from village to village, "
+            "protecting people from the dangers left behind by the war."
+        ),
+        "choices": [
+            ("Face the final guardian", "final_dragon")
+        ]
+    },
+
+    "final_dragon": {
+        "title": "The Final Battle",
+        "text": (
+            "A final roar shakes the chamber.\n\n"
+            "The Elder Ash Dragon descends from the darkness.\n\n"
+            "There will be no more running."
+        ),
+        "battle": "Elder Ash Dragon",
+        "choices": [
+            ("Continue", "true_ending")
+        ]
+    },
+
+    "true_ending": {
+        "title": "Kingdom of Ash — The End",
+        "text": (
+            "The dragon falls silent.\n\n"
+            "The ash storm finally clears.\n\n"
+            "Sunlight returns to Eldoria.\n\n"
+            "Your journey is over...\n\n"
+            "but the kingdom's story has only just begun."
+        ),
+        "choices": [
+            ("Return to Main Menu", "menu")
+        ]
+    },
+
+    "bad_end": {
+        "title": "Ending — The Road Ends",
+        "text": (
+            "You turn away from Blackthorne.\n\n"
+            "The forest disappears behind you.\n\n"
+            "Whatever was happening in Eldoria continues without you."
+        ),
+        "choices": [
+            ("Return to Main Menu", "menu")
+        ]
+    }
+}
+
+
+# ============================================================
+# GAME STATE
 # ============================================================
 
 def new_game():
     return {
+        "name": "Hero",
+
+        "level": 1,
+        "xp": 0,
+
+        "hp": 100,
+        "max_hp": 100,
+
+        "mp": 40,
+        "max_mp": 40,
+
+        "strength": 10,
+        "defense": 5,
+        "magic": 5,
+
+        "gold": 100,
+
+        "inventory": {
+            "Potion": 3,
+            "Mana Tonic": 2
+        },
+
+        "equipment": {
+            "weapon": "Iron Sword",
+            "armor": "Traveler's Coat"
+        },
+
+        "spells": [
+            "Ember",
+            "Mending Light"
+        ],
+
+        "companions": [],
+
+        "achievements": [],
+
+        "flags": {},
+
         "chapter": 1,
-        "name": "",
-        "health": 100,
-        "gold": 20,
 
-        "strength": 1,
-        "cunning": 1,
-        "honor": 1,
-
-        "inventory": [],
-
-        "met_mara": False,
-        "trusted_mara": False,
-        "helped_mara": False,
-
-        "knows_secret": False,
-        "has_ring": False,
-        "has_sword": False,
-        "has_letter": False,
-
-        "saved_villager": False,
-        "saved_knight": False,
-        "killed_knight": False,
-
-        "allied_wolves": False,
-        "allied_rebels": False,
-        "allied_crown": False,
-
-        "betrayed_crown": False,
-        "betrayed_rebels": False,
-
-        "ghost_warning": False,
-        "opened_crypt": False,
-
-        "duel_won": False,
-        "dragon_awakened": False,
-
-        "ending": None
+        "settings": {
+            "sound": True,
+            "music": True
+        }
     }
 
 
+game = new_game()
+
+
 # ============================================================
-#                    SAVE / LOAD
+# HELPER FUNCTIONS
 # ============================================================
 
-def save_game(game):
-    with open(SAVE_FILE, "w") as file:
-        json.dump(game, file, indent=4)
+def strength():
+    value = game["strength"]
 
-    print("\nGame saved.")
+    weapon = game["equipment"].get("weapon")
+
+    if weapon in ITEMS:
+        value += ITEMS[weapon].get("strength", 0)
+
+    return value
+
+
+def defense():
+    value = game["defense"]
+
+    armor = game["equipment"].get("armor")
+
+    if armor in ITEMS:
+        value += ITEMS[armor].get("defense", 0)
+
+    return value
+
+
+def magic_power():
+    value = game["magic"]
+
+    weapon = game["equipment"].get("weapon")
+    armor = game["equipment"].get("armor")
+
+    if weapon in ITEMS:
+        value += ITEMS[weapon].get("magic", 0)
+
+    if armor in ITEMS:
+        value += ITEMS[armor].get("magic", 0)
+
+    return value
+
+
+def add_item(item, amount=1):
+    game["inventory"][item] = game["inventory"].get(item, 0) + amount
+
+
+def remove_item(item, amount=1):
+    if game["inventory"].get(item, 0) < amount:
+        return False
+
+    game["inventory"][item] -= amount
+
+    if game["inventory"][item] <= 0:
+        del game["inventory"][item]
+
+    return True
+
+
+def add_xp(amount):
+    game["xp"] += amount
+
+    while game["xp"] >= game["level"] * 100:
+        game["xp"] -= game["level"] * 100
+        game["level"] += 1
+
+        game["max_hp"] += 15
+        game["max_mp"] += 5
+        game["strength"] += 2
+        game["defense"] += 2
+        game["magic"] += 1
+
+        game["hp"] = game["max_hp"]
+        game["mp"] = game["max_mp"]
+
+        unlock_achievement("Seasoned Adventurer")
+
+        messagebox.showinfo(
+            "LEVEL UP!",
+            f"You reached Level {game['level']}!"
+        )
+
+
+def unlock_achievement(name):
+    if name not in game["achievements"]:
+        game["achievements"].append(name)
+
+
+def apply_effects(effects):
+    if not effects:
+        return
+
+    for effect in effects:
+
+        kind = effect[0]
+
+        if kind == "flag":
+            game["flags"][effect[1]] = effect[2]
+
+        elif kind == "item":
+            add_item(effect[1], effect[2])
+
+        elif kind == "gold":
+            game["gold"] += effect[1]
+
+        elif kind == "xp":
+            add_xp(effect[1])
+
+        elif kind == "strength":
+            game["strength"] += effect[1]
+
+        elif kind == "defense":
+            game["defense"] += effect[1]
+
+        elif kind == "magic":
+            game["magic"] += effect[1]
+
+        elif kind == "chapter":
+            game["chapter"] = effect[1]
+
+
+# ============================================================
+# MAIN WINDOW
+# ============================================================
+
+root = tk.Tk()
+root.title("Kingdom of Ash")
+root.geometry("1200x760")
+root.minsize(950, 650)
+root.configure(bg="#111111")
+
+
+TITLE_FONT = ("Georgia", 26, "bold")
+HEADING_FONT = ("Georgia", 18, "bold")
+BODY_FONT = ("Georgia", 13)
+BUTTON_FONT = ("Georgia", 11, "bold")
+SMALL_FONT = ("Georgia", 10)
+
+
+story_frame = tk.Frame(root, bg="#171717")
+story_frame.pack(
+    side="left",
+    fill="both",
+    expand=True,
+    padx=15,
+    pady=15
+)
+
+
+side_frame = tk.Frame(
+    root,
+    bg="#202020",
+    width=270
+)
+
+side_frame.pack(
+    side="right",
+    fill="y",
+    padx=(0, 15),
+    pady=15
+)
+
+side_frame.pack_propagate(False)
+
+
+title_label = tk.Label(
+    story_frame,
+    text="KINGDOM OF ASH",
+    font=TITLE_FONT,
+    bg="#171717",
+    fg="#d7b56d"
+)
+
+title_label.pack(pady=(15, 5))
+
+
+scene_title = tk.Label(
+    story_frame,
+    text="",
+    font=HEADING_FONT,
+    bg="#171717",
+    fg="#caa86a"
+)
+
+scene_title.pack(pady=10)
+
+
+story_text = tk.Text(
+    story_frame,
+    wrap="word",
+    font=BODY_FONT,
+    bg="#111111",
+    fg="#eeeeee",
+    insertbackground="white",
+    relief="flat",
+    padx=25,
+    pady=20
+)
+
+story_text.pack(
+    fill="both",
+    expand=True,
+    padx=15,
+    pady=10
+)
+
+story_text.configure(state="disabled")
+
+
+choice_frame = tk.Frame(
+    story_frame,
+    bg="#171717"
+)
+
+choice_frame.pack(
+    fill="x",
+    padx=20,
+    pady=10
+)
+
+
+# ============================================================
+# SIDE PANEL
+# ============================================================
+
+stats_title = tk.Label(
+    side_frame,
+    text="CHARACTER",
+    font=HEADING_FONT,
+    bg="#202020",
+    fg="#d7b56d"
+)
+
+stats_title.pack(pady=(15, 5))
+
+
+stats_label = tk.Label(
+    side_frame,
+    text="",
+    justify="left",
+    anchor="w",
+    font=SMALL_FONT,
+    bg="#202020",
+    fg="#eeeeee"
+)
+
+stats_label.pack(
+    fill="x",
+    padx=20,
+    pady=10
+)
+
+
+def update_stats():
+
+    weapon = game["equipment"].get("weapon", "None")
+    armor = game["equipment"].get("armor", "None")
+
+    text = (
+        f"Level: {game['level']}\n"
+        f"XP: {game['xp']}/{game['level'] * 100}\n\n"
+
+        f"HP: {game['hp']} / {game['max_hp']}\n"
+        f"MP: {game['mp']} / {game['max_mp']}\n\n"
+
+        f"Strength: {strength()}\n"
+        f"Defense: {defense()}\n"
+        f"Magic: {magic_power()}\n\n"
+
+        f"Gold: {game['gold']}\n\n"
+
+        f"Weapon:\n{weapon}\n\n"
+        f"Armor:\n{armor}"
+    )
+
+    stats_label.config(text=text)
+
+
+def clear_choices():
+
+    for widget in choice_frame.winfo_children():
+        widget.destroy()
+
+
+def write_story(title, text):
+
+    scene_title.config(text=title)
+
+    story_text.configure(state="normal")
+    story_text.delete("1.0", "end")
+    story_text.insert("end", text)
+    story_text.configure(state="disabled")
+
+    story_text.see("1.0")
+
+    update_stats()
+
+
+# ============================================================
+# SAVE / LOAD
+# ============================================================
+
+def save_game():
+
+    try:
+        with open(SAVE_FILE, "w", encoding="utf-8") as f:
+            json.dump(game, f, indent=4)
+
+        messagebox.showinfo(
+            "Game Saved",
+            "Your progress has been saved."
+        )
+
+    except Exception as e:
+        messagebox.showerror(
+            "Save Error",
+            str(e)
+        )
 
 
 def load_game():
+
+    global game
+
     if not os.path.exists(SAVE_FILE):
-        print("\nNo save file exists.")
-        pause()
-        return None
+        messagebox.showwarning(
+            "No Save",
+            "No save file was found."
+        )
+        return
 
     try:
-        with open(SAVE_FILE, "r") as file:
-            game = json.load(file)
 
-        print("\nGame loaded.")
-        pause()
-        return game
+        with open(SAVE_FILE, "r", encoding="utf-8") as f:
+            game = json.load(f)
 
-    except Exception:
-        print("\nThe save file could not be loaded.")
-        pause()
-        return None
+        update_stats()
+
+        show_scene("intro")
+
+    except Exception as e:
+
+        messagebox.showerror(
+            "Load Error",
+            str(e)
+        )
 
 
 # ============================================================
-#                    STATUS SCREEN
+# STORY SYSTEM
 # ============================================================
 
-def status(game):
-    title("CHARACTER")
+def show_scene(scene_id):
 
-    print(f"Name:       {game['name']}")
-    print(f"Health:     {game['health']}/100")
-    print(f"Gold:       {game['gold']}")
-    print()
-    print(f"Strength:   {game['strength']}")
-    print(f"Cunning:    {game['cunning']}")
-    print(f"Honor:      {game['honor']}")
-    print()
+    clear_choices()
 
-    print("Inventory:")
+    if scene_id == "menu":
+        show_main_menu()
+        return
 
-    if game["inventory"]:
-        for item in game["inventory"]:
-            print(f"  - {item}")
-    else:
-        print("  Empty")
+    scene = S.get(scene_id)
 
-    pause()
+    if not scene:
+        write_story(
+            "Error",
+            f"Scene '{scene_id}' does not exist."
+        )
+        return
+
+    apply_effects(scene.get("effects"))
+
+    write_story(
+        scene["title"],
+        scene["text"]
+    )
+
+    if "battle" in scene:
+
+        battle_button = tk.Button(
+            choice_frame,
+            text=f"⚔ Fight {scene['battle']}",
+            command=lambda: start_battle(
+                scene["battle"],
+                scene.get("choices", [])
+            ),
+            font=BUTTON_FONT,
+            bg="#6b2c2c",
+            fg="white",
+            activebackground="#8c3d3d",
+            activeforeground="white",
+            relief="flat",
+            padx=15,
+            pady=10
+        )
+
+        battle_button.pack(
+            fill="x",
+            pady=5
+        )
+
+        return
+
+    for text, destination in scene.get("choices", []):
+
+        button = tk.Button(
+            choice_frame,
+            text=text,
+            command=lambda d=destination: show_scene(d),
+            font=BUTTON_FONT,
+            bg="#303030",
+            fg="#eeeeee",
+            activebackground="#4a4a4a",
+            activeforeground="white",
+            relief="flat",
+            padx=15,
+            pady=9
+        )
+
+        button.pack(
+            fill="x",
+            pady=4
+        )
 
 
 # ============================================================
-#                    RANDOM EVENTS
+# COMBAT
 # ============================================================
 
-def damage(game, amount):
-    game["health"] -= amount
-
-    if game["health"] < 0:
-        game["health"] = 0
+current_battle = None
 
 
-def heal(game, amount):
-    game["health"] += amount
+def start_battle(enemy_name, after_choices):
 
-    if game["health"] > 100:
-        game["health"] = 100
+    global current_battle
+
+    enemy_template = ENEMIES[enemy_name]
+
+    current_battle = {
+        "name": enemy_name,
+        "hp": enemy_template["hp"],
+        "max_hp": enemy_template["hp"],
+        "attack": enemy_template["attack"],
+        "defense": enemy_template["defense"],
+        "xp": enemy_template["xp"],
+        "gold": enemy_template["gold"],
+        "poison": enemy_template.get("poison", False),
+        "boss": enemy_template.get("boss", False),
+        "no_flee": enemy_template.get("no_flee", False),
+        "weakened": False,
+        "burn": 0
+    }
+
+    show_battle_screen(after_choices)
 
 
-def add_item(game, item):
-    if item not in game["inventory"]:
-        game["inventory"].append(item)
+def show_battle_screen(after_choices):
 
+    clear_choices()
 
-def has_item(game, item):
-    return item in game["inventory"]
+    enemy = current_battle
 
-
-# ============================================================
-#                    CHAPTER 1
-# ============================================================
-
-def chapter_1(game):
-    game["chapter"] = 1
-
-    title("CHAPTER I — THE BELL OF BLACKTHORNE")
-
-    slow(
-        "The first bell rings at midnight.\n\n"
-        "You are standing in the rain outside the village of Blackthorne, "
-        "a forgotten settlement pressed between the King's Road and the "
-        "ancient forest known as the Hollowwood."
+    write_story(
+        f"Battle — {enemy['name']}",
+        (
+            f"You face {enemy['name']}!\n\n"
+            f"Enemy HP: {enemy['hp']} / {enemy['max_hp']}\n"
+            f"Your HP: {game['hp']} / {game['max_hp']}\n"
+            f"Your MP: {game['mp']} / {game['max_mp']}"
+        )
     )
 
-    slow(
-        "\nThe second bell rings.\n\n"
-        "Every candle in the village goes out."
-    )
+    actions = [
+        ("⚔ Sword Strike", lambda: player_attack(after_choices)),
+        ("💥 Power Slash", lambda: power_slash(after_choices)),
+        ("🛡 Guard Break", lambda: guard_break(after_choices)),
+        ("✨ Spells", lambda: spell_menu(after_choices)),
+        ("🛡 Defend", lambda: defend_turn(after_choices)),
+        ("🎒 Items", lambda: item_menu(after_choices)),
+        ("🏃 Flee", lambda: flee_battle(after_choices))
+    ]
 
-    slow(
-        "\nThen comes the third bell."
-    )
+    for text, command in actions:
 
-    slow(
-        "\nSomething screams from inside the forest."
-    )
-
-    slow(
-        "\nYou have heard stories about Blackthorne."
-        "\nSoldiers vanish here."
-        "\nTravelers disappear."
-        "\nChildren claim they see a pale woman walking among the trees."
-        "\nThe royal court says these are peasant superstitions."
-    )
-
-    slow(
-        "\nYou came here looking for work."
-        "\nInstead, you find a village preparing for war."
-    )
-
-    print("\nA frightened man runs toward you.")
-
-    slow(
-        "\n\"You! Stranger! If you've got a sword, now would be the time "
-        "to admit it!\""
-    )
-
-    choice = choose(
-        "What do you do?",
-        [
-            "Draw your weapon and demand answers.",
-            "Calmly ask what happened.",
-            "Ignore him and enter the village.",
-            "Offer to help immediately."
-        ]
-    )
-
-    if choice == 1:
-        game["strength"] += 1
-
-        slow(
-            "\nThe man freezes when he sees your hand on your weapon."
-            "\n\n\"Easy! Easy! We're not the enemy.\""
+        button = tk.Button(
+            choice_frame,
+            text=text,
+            command=command,
+            font=BUTTON_FONT,
+            bg="#303030",
+            fg="#eeeeee",
+            activebackground="#4a4a4a",
+            activeforeground="white",
+            relief="flat",
+            padx=10,
+            pady=8
         )
 
-    elif choice == 2:
-        game["cunning"] += 1
-
-        slow(
-            "\nYou keep your voice calm."
-            "\n\nThe man takes a breath."
-            "\n\n\"Three knights rode into the Hollowwood yesterday. "
-            "Only their horses came back.\""
+        button.pack(
+            fill="x",
+            pady=3
         )
 
-    elif choice == 3:
-        slow(
-            "\nYou walk past him."
-            "\n\nHe shouts something after you, but you ignore it."
-            "\n\nInside the village, you immediately notice the people "
-            "watching you from their windows."
-        )
 
-    else:
-        game["honor"] += 1
-        game["gold"] += 5
+def enemy_turn(after_choices):
 
-        slow(
-            "\nThe man looks surprised."
-            "\n\n\"Gods bless you. Maybe there's still hope.\""
-        )
+    enemy = current_battle
 
-    slow(
-        "\nBefore you can ask another question, a woman steps out from "
-        "beneath a wooden awning."
+    if enemy is None:
+        return
+
+    if enemy["hp"] <= 0:
+        return
+
+    damage = random.randint(
+        max(1, enemy["attack"] - 5),
+        enemy["attack"] + 5
     )
 
-    slow(
-        "\nShe wears a dark green cloak and carries a shortbow."
-        "\n\n\"Don't listen to the villagers,\" she says."
-        "\n\nHer eyes meet yours."
-        "\n\n\"If you truly want to know what's happening, come with me.\""
-    )
+    damage -= defense() // 3
 
-    choice = choose(
-        "Do you follow the mysterious woman?",
-        [
-            "Follow her.",
-            "Refuse and investigate the village yourself.",
-            "Ask her name first."
-        ]
-    )
+    if damage < 1:
+        damage = 1
 
-    if choice == 1:
-        game["met_mara"] = True
-        game["trusted_mara"] = True
+    game["hp"] -= damage
 
-        slow(
-            "\nShe leads you behind the chapel."
-            "\n\n\"My name is Mara,\" she says."
-            "\n\n\"And the knights did not vanish.\""
-        )
+    if enemy["poison"] and random.random() < 0.25:
 
-        slow(
-            "\nShe looks toward the forest."
-            "\n\n\"They were taken.\""
-        )
+        game["hp"] -= 3
 
-    elif choice == 2:
-        game["cunning"] += 1
-
-        slow(
-            "\nYou decide not to trust strangers."
-            "\n\nThe woman smiles faintly."
-            "\n\n\"Wise.\""
-            "\n\nThen she disappears into the rain."
+        poison_text = (
+            f"\n\nThe {enemy['name']} leaves you poisoned!"
         )
 
     else:
-        game["met_mara"] = True
+        poison_text = ""
 
-        slow(
-            "\nShe smiles."
-            "\n\n\"Mara.\""
-            "\n\nShe pauses."
-            "\n\n\"Remember it. You may hear my name again.\""
+    if game["hp"] <= 0:
+
+        game["hp"] = 0
+
+        update_stats()
+
+        messagebox.showinfo(
+            "Defeat",
+            "You were defeated.\n\n"
+            "Your journey ends here."
         )
 
-    slow(
-        "\nLater that night, while searching an abandoned stable, "
-        "you find a wounded royal knight hiding beneath the floorboards."
+        show_main_menu()
+        return
+
+    show_battle_screen(after_choices)
+
+
+def player_attack(after_choices):
+
+    enemy = current_battle
+
+    damage = random.randint(
+        max(1, strength() - 4),
+        strength() + 8
     )
 
-    slow(
-        "\nHis armor is covered in black mud."
-        "\n\nA strange symbol has been burned into his breastplate:"
-        "\nA crown split down the middle."
+    critical = random.random() < 0.12
+
+    if critical:
+        damage *= 2
+
+    damage -= enemy["defense"] // 2
+
+    if damage < 1:
+        damage = 1
+
+    enemy["hp"] -= damage
+
+    if enemy["hp"] <= 0:
+
+        enemy["hp"] = 0
+
+        win_battle(after_choices)
+
+        return
+
+    enemy_turn(after_choices)
+
+
+def power_slash(after_choices):
+
+    if game["mp"] < 5:
+
+        messagebox.showwarning(
+            "Not Enough MP",
+            "You need 5 MP."
+        )
+
+        return
+
+    game["mp"] -= 5
+
+    enemy = current_battle
+
+    damage = random.randint(
+        strength() + 5,
+        strength() + 15
     )
 
-    choice = choose(
-        "The knight is barely conscious. What do you do?",
-        [
-            "Help him.",
-            "Question him before helping.",
-            "Take his equipment and leave him.",
-            "Report him to the village."
-        ]
+    damage -= enemy["defense"] // 2
+
+    if damage < 1:
+        damage = 1
+
+    enemy["hp"] -= damage
+
+    if enemy["hp"] <= 0:
+
+        enemy["hp"] = 0
+        win_battle(after_choices)
+
+        return
+
+    enemy_turn(after_choices)
+
+
+def guard_break(after_choices):
+
+    enemy = current_battle
+
+    damage = random.randint(
+        max(1, strength() - 5),
+        strength() + 3
     )
 
-    if choice == 1:
-        game["saved_knight"] = True
-        game["honor"] += 1
-        game["has_sword"] = True
-        add_item(game, "Royal Knight's Sword")
+    enemy["hp"] -= damage
 
-        slow(
-            "\nYou bind his wounds."
-            "\n\nBefore passing out, he grabs your arm."
-            "\n\n\"The king... has been betrayed...\""
+    enemy["weakened"] = True
+    enemy["defense"] = max(
+        0,
+        enemy["defense"] - 5
+    )
+
+    if enemy["hp"] <= 0:
+
+        enemy["hp"] = 0
+        win_battle(after_choices)
+
+        return
+
+    enemy_turn(after_choices)
+
+
+def defend_turn(after_choices):
+
+    enemy = current_battle
+
+    damage = random.randint(
+        max(1, enemy["attack"] - 5),
+        enemy["attack"] + 5
+    )
+
+    damage -= defense() // 2
+
+    damage //= 2
+
+    if damage < 1:
+        damage = 1
+
+    game["hp"] -= damage
+
+    if game["hp"] <= 0:
+
+        game["hp"] = 0
+
+        messagebox.showinfo(
+            "Defeat",
+            "You were defeated."
         )
 
-    elif choice == 2:
-        game["cunning"] += 1
+        show_main_menu()
+        return
 
-        slow(
-            "\n\"Who attacked you?\" you ask."
-            "\n\nThe knight whispers:"
-            "\n\n\"Not men.\""
+    show_battle_screen(after_choices)
+
+
+def spell_menu(after_choices):
+
+    clear_choices()
+
+    for spell_name in game["spells"]:
+
+        spell = SPELLS.get(spell_name)
+
+        if not spell:
+            continue
+
+        button = tk.Button(
+            choice_frame,
+            text=(
+                f"{spell_name} "
+                f"({spell.get('cost', 0)} MP)"
+            ),
+            command=lambda s=spell_name:
+            cast_spell(s, after_choices),
+            font=BUTTON_FONT,
+            bg="#3d3057",
+            fg="white",
+            activebackground="#564275",
+            relief="flat",
+            padx=10,
+            pady=8
         )
 
-        slow(
-            "\nHe passes out."
+        button.pack(
+            fill="x",
+            pady=3
         )
 
-        game["saved_knight"] = True
-        add_item(game, "Royal Knight's Sword")
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=lambda: show_battle_screen(after_choices),
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
 
-    elif choice == 3:
-        game["gold"] += 25
-        game["has_sword"] = True
-        add_item(game, "Royal Knight's Sword")
+    back.pack(
+        fill="x",
+        pady=8
+    )
 
-        slow(
-            "\nYou take his sword and leave."
-            "\n\nAs you step outside, you hear a whisper."
-            "\n\n\"Coward.\""
+
+def cast_spell(spell_name, after_choices):
+
+    spell = SPELLS[spell_name]
+
+    cost = spell.get("cost", 0)
+
+    if game["mp"] < cost:
+
+        messagebox.showwarning(
+            "Not Enough MP",
+            "You do not have enough mana."
         )
+
+        return
+
+    game["mp"] -= cost
+
+    if "heal" in spell:
+
+        amount = spell["heal"] + magic_power()
+
+        game["hp"] = min(
+            game["max_hp"],
+            game["hp"] + amount
+        )
+
+        enemy_turn(after_choices)
+        return
+
+    enemy = current_battle
+
+    damage = spell.get("power", 0)
+
+    damage += magic_power()
+
+    damage = random.randint(
+        max(1, damage - 8),
+        damage + 8
+    )
+
+    damage -= enemy["defense"] // 3
+
+    if damage < 1:
+        damage = 1
+
+    enemy["hp"] -= damage
+
+    if spell.get("burn"):
+
+        enemy["burn"] = 3
+
+    if enemy["hp"] <= 0:
+
+        enemy["hp"] = 0
+        win_battle(after_choices)
+
+        return
+
+    enemy_turn(after_choices)
+
+
+def item_menu(after_choices):
+
+    clear_choices()
+
+    usable = False
+
+    for item_name, amount in list(
+        game["inventory"].items()
+    ):
+
+        item = ITEMS.get(item_name)
+
+        if not item:
+            continue
+
+        if item["type"] != "consumable":
+            continue
+
+        usable = True
+
+        button = tk.Button(
+            choice_frame,
+            text=f"{item_name} x{amount}",
+            command=lambda i=item_name:
+            use_item(i, after_choices),
+            font=BUTTON_FONT,
+            bg="#304b3a",
+            fg="white",
+            activebackground="#3d604b",
+            relief="flat",
+            padx=10,
+            pady=8
+        )
+
+        button.pack(
+            fill="x",
+            pady=3
+        )
+
+    if not usable:
+
+        label = tk.Label(
+            choice_frame,
+            text="You have no usable items.",
+            font=BODY_FONT,
+            bg="#171717",
+            fg="#bbbbbb"
+        )
+
+        label.pack(pady=10)
+
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=lambda: show_battle_screen(after_choices),
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
+
+    back.pack(
+        fill="x",
+        pady=8
+    )
+
+
+def use_item(item_name, after_choices):
+
+    if not remove_item(item_name):
+        return
+
+    if item_name == "Potion":
+
+        game["hp"] = min(
+            game["max_hp"],
+            game["hp"] + 40
+        )
+
+    elif item_name == "Elixir":
+
+        game["hp"] = min(
+            game["max_hp"],
+            game["hp"] + 100
+        )
+
+    elif item_name == "Mana Tonic":
+
+        game["mp"] = min(
+            game["max_mp"],
+            game["mp"] + 35
+        )
+
+    elif item_name == "Antidote":
+        pass
+
+    enemy_turn(after_choices)
+
+
+def flee_battle(after_choices):
+
+    enemy = current_battle
+
+    if enemy.get("no_flee"):
+
+        messagebox.showwarning(
+            "Cannot Escape",
+            "There is nowhere to run!"
+        )
+
+        return
+
+    if random.random() < 0.65:
+
+        messagebox.showinfo(
+            "Escaped",
+            "You escaped from the battle."
+        )
+
+        show_scene("chapter2")
 
     else:
-        slow(
-            "\nYou call the villagers."
-            "\n\nBut before they arrive, the knight disappears."
+
+        enemy_turn(after_choices)
+
+
+def win_battle(after_choices):
+
+    global current_battle
+
+    enemy = current_battle
+
+    reward_xp = enemy["xp"]
+    reward_gold = enemy["gold"]
+
+    game["gold"] += reward_gold
+
+    add_xp(reward_xp)
+
+    unlock_achievement("First Blood")
+
+    if enemy["boss"]:
+        unlock_achievement("Boss Breaker")
+
+    if enemy["name"] in (
+        "The Ash Dragon",
+        "Elder Ash Dragon"
+    ):
+        unlock_achievement("Dragon's Shadow")
+
+    current_battle = None
+
+    update_stats()
+
+    messagebox.showinfo(
+        "Victory!",
+        (
+            f"You defeated {enemy['name']}!\n\n"
+            f"XP gained: {reward_xp}\n"
+            f"Gold gained: {reward_gold}"
         )
-
-    slow(
-        "\nAt dawn, the village bell rings again."
     )
 
-    slow(
-        "\nThis time, nobody rings it."
-    )
+    if after_choices:
 
-    slow(
-        "\nYou look toward the Hollowwood."
-        "\n\nA column of black smoke rises between the trees."
-    )
+        # Continue using the first choice
+        next_scene = after_choices[0][1]
 
-    pause()
+        show_scene(next_scene)
+
+    else:
+
+        show_main_menu()
 
 
 # ============================================================
-#                    CHAPTER 2
+# INVENTORY
 # ============================================================
 
-def chapter_2(game):
-    game["chapter"] = 2
+def show_inventory():
 
-    title("CHAPTER II — THE HOLLOWWOOD")
+    clear_choices()
 
-    slow(
-        "The forest seems to breathe."
-        "\n\nEvery step deeper into the Hollowwood makes the village "
-        "behind you feel more distant."
+    write_story(
+        "Inventory",
+        "Your current equipment and items."
     )
 
-    if game["met_mara"]:
-        slow(
-            "\nMara walks ahead of you."
-            "\n\n\"There is an old ruin somewhere beyond these trees,\" "
-            "she says."
-            "\n\n\"If the stories are true, that's where they took the knights.\""
-        )
-    else:
-        slow(
-            "\nYou travel alone."
-            "\n\nThe forest is unnaturally quiet."
+    for item_name, amount in game["inventory"].items():
+
+        button = tk.Button(
+            choice_frame,
+            text=f"{item_name} x{amount}",
+            command=lambda i=item_name:
+            inspect_item(i),
+            font=BUTTON_FONT,
+            bg="#303030",
+            fg="white",
+            relief="flat",
+            padx=10,
+            pady=8
         )
 
-    slow(
-        "\nAfter an hour, you discover three paths."
+        button.pack(
+            fill="x",
+            pady=3
+        )
+
+    button = tk.Button(
+        choice_frame,
+        text="⚔ Equipment",
+        command=show_equipment,
+        font=BUTTON_FONT,
+        bg="#4a3a25",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
     )
 
-    choice = choose(
-        "Which path do you take?",
-        [
-            "The old stone road.",
-            "The narrow hunter's trail.",
-            "The path covered in black flowers."
-        ]
+    button.pack(
+        fill="x",
+        pady=8
     )
 
-    if choice == 1:
-        game["strength"] += 1
-
-        slow(
-            "\nThe stone road leads to a ruined watchtower."
-            "\n\nInside, you find an old shield bearing the crest "
-            "of House Valen."
-        )
-
-        add_item(game, "Valen Shield")
-
-    elif choice == 2:
-        game["cunning"] += 1
-
-        slow(
-            "\nThe hunter's trail is difficult to follow."
-            "\n\nBut you discover footprints."
-            "\n\nHuman."
-            "\n\nAnd very fresh."
-        )
-
-        add_item(game, "Hunter's Map")
-
-    else:
-        game["knows_secret"] = True
-
-        slow(
-            "\nThe flowers whisper when you walk past them."
-            "\n\nYou hear a woman's voice."
-            "\n\n\"The crown is lying.\""
-        )
-
-        slow(
-            "\nYou turn."
-            "\n\nNobody is there."
-        )
-
-        game["ghost_warning"] = True
-
-    slow(
-        "\nEventually, you reach a clearing."
-        "\n\nThree armed men surround a young prisoner."
+    button = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_main_menu,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
     )
 
-    choice = choose(
-        "What do you do?",
-        [
-            "Attack the guards.",
-            "Sneak behind them.",
-            "Talk your way past them.",
-            "Leave them alone."
-        ]
+    button.pack(
+        fill="x"
     )
 
-    if choice == 1:
-        game["strength"] += 1
-        damage(game, 15)
 
-        slow(
-            "\nSteel clashes against steel."
-            "\n\nYou defeat the guards, but one escapes."
-        )
+def inspect_item(item_name):
 
-        game["saved_villager"] = True
+    item = ITEMS.get(item_name)
 
-    elif choice == 2:
-        game["cunning"] += 2
-        game["saved_villager"] = True
+    if not item:
+        return
 
-        slow(
-            "\nYou circle behind the guards."
-            "\n\nA quick strike drops the first."
-            "\n\nThe others flee."
-        )
-
-    elif choice == 3:
-        game["cunning"] += 1
-
-        slow(
-            "\nYou claim to be a royal messenger."
-            "\n\nThe guards hesitate."
-            "\n\nYou point toward the forest."
-            "\n\n\"Orders from the castle. Move.\""
-            "\n\nSurprisingly, they believe you."
-        )
-
-        game["saved_villager"] = True
-
-    else:
-        game["honor"] -= 1
-
-        slow(
-            "\nYou walk away."
-            "\n\nThe prisoner's screams follow you through the trees."
-        )
-
-    slow(
-        "\nBeyond the clearing stands a ruined fortress."
-        "\n\nIts gates are open."
-        "\n\nInside, you see banners bearing the royal crest."
+    description = item.get(
+        "description",
+        "No description."
     )
 
-    slow(
-        "\nBut beneath them hangs another banner."
-        "\n\nA black crown."
+    messagebox.showinfo(
+        item_name,
+        description
     )
 
-    pause()
+
+def show_equipment():
+
+    clear_choices()
+
+    weapon = game["equipment"].get("weapon")
+    armor = game["equipment"].get("armor")
+
+    write_story(
+        "Equipment",
+        (
+            f"Weapon:\n{weapon}\n\n"
+            f"Armor:\n{armor}\n\n"
+            "You can equip purchased equipment below."
+        )
+    )
+
+    for item_name in game["inventory"]:
+
+        item = ITEMS.get(item_name)
+
+        if not item:
+            continue
+
+        if item["type"] not in (
+            "weapon",
+            "armor"
+        ):
+            continue
+
+        button = tk.Button(
+            choice_frame,
+            text=f"Equip {item_name}",
+            command=lambda i=item_name:
+            equip_item(i),
+            font=BUTTON_FONT,
+            bg="#303030",
+            fg="white",
+            relief="flat",
+            padx=10,
+            pady=8
+        )
+
+        button.pack(
+            fill="x",
+            pady=3
+        )
+
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_inventory,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
+
+    back.pack(
+        fill="x",
+        pady=8
+    )
+
+
+def equip_item(item_name):
+
+    item = ITEMS.get(item_name)
+
+    if not item:
+        return
+
+    if item["type"] == "weapon":
+
+        game["equipment"]["weapon"] = item_name
+
+    elif item["type"] == "armor":
+
+        game["equipment"]["armor"] = item_name
+
+    update_stats()
+
+    messagebox.showinfo(
+        "Equipped",
+        f"You equipped {item_name}."
+    )
+
+    show_equipment()
 
 
 # ============================================================
-#                    CHAPTER 3
+# TOWN / SHOPS
 # ============================================================
 
-def chapter_3(game):
-    game["chapter"] = 3
+def show_town():
 
-    title("CHAPTER III — THE BLACK CROWN")
+    clear_choices()
 
-    slow(
-        "The ruined fortress was once called Greymarch."
-        "\n\nNow it belongs to something else."
+    write_story(
+        "Town of Blackthorne",
+        (
+            "The town is recovering from the events of the story.\n\n"
+            "You can visit several shops here."
+        )
     )
 
-    slow(
-        "\nYou enter the great hall."
-        "\n\nAt the far end sits a man wearing battered royal armor."
-    )
+    buttons = [
+        ("⚒ Blacksmith", show_blacksmith),
+        ("⚕ Apothecary", show_apothecary),
+        ("🔮 Mage's Shop", show_mage_shop),
+        ("🐉 Dragonforge", show_dragonforge),
+        ("🏨 Inn", rest_at_inn),
+        ("← Back", show_main_menu)
+    ]
 
-    slow(
-        "\nHe looks directly at you."
-        "\n\n\"You shouldn't have come here.\""
-    )
+    for text, command in buttons:
 
-    if game["saved_knight"]:
-        slow(
-            "\nThe knight you rescued is mentioned."
-            "\n\nThe man laughs bitterly."
-            "\n\n\"Then you already know too much.\""
+        button = tk.Button(
+            choice_frame,
+            text=text,
+            command=command,
+            font=BUTTON_FONT,
+            bg="#303030",
+            fg="white",
+            relief="flat",
+            padx=10,
+            pady=8
         )
 
-    choice = choose(
-        "How do you respond?",
-        [
-            "Demand the truth.",
-            "Pretend you know nothing.",
-            "Threaten him.",
-            "Ask about the black crown."
-        ]
-    )
-
-    if choice == 1:
-        game["honor"] += 1
-
-        slow(
-            "\n\"Enough games. Tell me what is happening.\""
-            "\n\nThe man sighs."
-            "\n\n\"King Aldric has been dead for six months.\""
+        button.pack(
+            fill="x",
+            pady=3
         )
 
-    elif choice == 2:
-        game["cunning"] += 2
 
-        slow(
-            "\nYou pretend confusion."
-            "\n\nThe man studies you."
-            "\n\n\"Interesting.\""
+def buy_item(item_name):
+
+    item = ITEMS[item_name]
+
+    price = item["price"]
+
+    if game["gold"] < price:
+
+        messagebox.showwarning(
+            "Not Enough Gold",
+            f"You need {price} gold."
         )
 
-    elif choice == 3:
-        game["strength"] += 1
+        return
 
-        slow(
-            "\nYour hand moves toward your weapon."
-            "\n\nThe man smiles."
-            "\n\n\"You have courage. Or stupidity.\""
+    game["gold"] -= price
+
+    add_item(item_name)
+
+    if item["type"] == "weapon":
+        unlock_achievement("Master Trader")
+
+    update_stats()
+
+    messagebox.showinfo(
+        "Purchased",
+        f"You purchased {item_name}."
+    )
+
+
+def shop_button(item_name):
+
+    item = ITEMS[item_name]
+
+    return tk.Button(
+        choice_frame,
+        text=f"{item_name} — {item['price']} gold",
+        command=lambda i=item_name: buy_item(i),
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
+
+
+def show_blacksmith():
+
+    clear_choices()
+
+    write_story(
+        "Blacksmith",
+        "Weapons forged for adventurers and knights."
+    )
+
+    for item in (
+        "Iron Sword",
+        "Knight's Longsword",
+        "Moonsteel Blade"
+    ):
+
+        button = shop_button(item)
+        button.pack(
+            fill="x",
+            pady=3
         )
 
-    else:
-        game["knows_secret"] = True
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_town,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
 
-        slow(
-            "\nThe man's expression changes."
-            "\n\n\"You saw it.\""
-            "\n\n\"The crown.\""
+    back.pack(
+        fill="x",
+        pady=8
+    )
+
+
+def show_apothecary():
+
+    clear_choices()
+
+    write_story(
+        "Apothecary",
+        "Potions and supplies for adventurers."
+    )
+
+    for item in (
+        "Potion",
+        "Elixir",
+        "Mana Tonic",
+        "Antidote"
+    ):
+
+        button = shop_button(item)
+
+        button.pack(
+            fill="x",
+            pady=3
         )
 
-    slow(
-        "\nHe explains that the kingdom has been ruled by a council "
-        "since the king's supposed death."
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_town,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
     )
 
-    slow(
-        "\nBut someone has been controlling that council."
-        "\n\nSomeone who calls themselves..."
-        "\n\nTHE ASH KING."
+    back.pack(
+        fill="x",
+        pady=8
     )
 
-    slow(
-        "\nBefore you can ask more, arrows slam into the windows."
+
+def show_mage_shop():
+
+    clear_choices()
+
+    write_story(
+        "Mage's Shop",
+        "Ancient spells and magical knowledge."
     )
 
-    slow(
-        "\nSoldiers have arrived."
-    )
+    spells_for_sale = {
+        "Frost Lance": 100,
+        "Thunder": 200,
+        "Flame Wall": 250,
+        "Starfall": 500
+    }
 
-    choice = choose(
-        "You need to escape.",
-        [
-            "Fight through the front gate.",
-            "Escape through the crypt.",
-            "Climb the tower.",
-            "Hide and wait."
-        ]
-    )
+    for spell_name, price in spells_for_sale.items():
 
-    if choice == 1:
-        damage(game, 25)
-        game["strength"] += 1
-
-        slow(
-            "\nYou charge."
-            "\n\nThe battle is brutal."
-            "\n\nBut you break through."
+        button = tk.Button(
+            choice_frame,
+            text=f"{spell_name} — {price} gold",
+            command=lambda s=spell_name, p=price:
+            buy_spell(s, p),
+            font=BUTTON_FONT,
+            bg="#3d3057",
+            fg="white",
+            relief="flat",
+            padx=10,
+            pady=8
         )
 
-    elif choice == 2:
-        game["opened_crypt"] = True
-
-        slow(
-            "\nYou descend beneath the fortress."
-            "\n\nThe crypt is filled with ancient statues."
+        button.pack(
+            fill="x",
+            pady=3
         )
 
-        if game["ghost_warning"]:
-            slow(
-                "\nA pale woman appears between the statues."
-                "\n\n\"Do not wake what sleeps beneath the crown.\""
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_town,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
+
+    back.pack(
+        fill="x",
+        pady=8
+    )
+
+
+def buy_spell(spell_name, price):
+
+    if spell_name in game["spells"]:
+
+        messagebox.showinfo(
+            "Already Known",
+            f"You already know {spell_name}."
+        )
+
+        return
+
+    if game["gold"] < price:
+
+        messagebox.showwarning(
+            "Not Enough Gold",
+            f"You need {price} gold."
+        )
+
+        return
+
+    game["gold"] -= price
+    game["spells"].append(spell_name)
+
+    unlock_achievement("Arcane Student")
+
+    update_stats()
+
+    messagebox.showinfo(
+        "Spell Learned",
+        f"You learned {spell_name}!"
+    )
+
+
+def show_dragonforge():
+
+    clear_choices()
+
+    write_story(
+        "Dragonforge",
+        (
+            "A legendary forge sits at the edge of town.\n\n"
+            "Only the strongest adventurers can afford its equipment."
+        )
+    )
+
+    for item in (
+        "Runic Plate",
+        "Dragon Mail",
+        "Dragonfang"
+    ):
+
+        button = shop_button(item)
+
+        button.pack(
+            fill="x",
+            pady=3
+        )
+
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_town,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
+
+    back.pack(
+        fill="x",
+        pady=8
+    )
+
+
+def rest_at_inn():
+
+    cost = 20
+
+    if game["gold"] < cost:
+
+        messagebox.showwarning(
+            "Not Enough Gold",
+            "The inn costs 20 gold."
+        )
+
+        return
+
+    game["gold"] -= cost
+
+    game["hp"] = game["max_hp"]
+    game["mp"] = game["max_mp"]
+
+    update_stats()
+
+    messagebox.showinfo(
+        "Rested",
+        "You feel completely refreshed."
+    )
+
+
+# ============================================================
+# COMPANIONS
+# ============================================================
+
+def show_companions():
+
+    clear_choices()
+
+    if not game["companions"]:
+
+        write_story(
+            "Companions",
+            (
+                "You currently have no permanent companions.\n\n"
+                "Some story choices can unlock companions."
             )
-
-    elif choice == 3:
-        game["cunning"] += 1
-
-        slow(
-            "\nYou climb the tower."
-            "\n\nFrom the roof, you see hundreds of soldiers "
-            "marching toward the fortress."
-        )
-
-        slow(
-            "\nYou also see a road leading north."
-            "\n\nToward the capital."
         )
 
     else:
-        slow(
-            "\nYou hide."
-            "\n\nHours pass."
-            "\n\nEventually, the soldiers leave."
+
+        write_story(
+            "Companions",
+            "\n".join(game["companions"])
         )
 
-    slow(
-        "\nBefore escaping, you discover a sealed letter."
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_main_menu,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
     )
 
-    add_item(game, "Sealed Letter")
-    game["has_letter"] = True
-
-    slow(
-        "\nThe letter is addressed to you."
+    back.pack(
+        fill="x",
+        pady=8
     )
-
-    slow(
-        "\nThere is no signature."
-    )
-
-    pause()
 
 
 # ============================================================
-#                    CHAPTER 4
+# ACHIEVEMENTS
 # ============================================================
 
-def chapter_4(game):
-    game["chapter"] = 4
+ACHIEVEMENTS = [
+    "First Blood",
+    "Seasoned Adventurer",
+    "Veteran of Eldoria",
+    "Well Funded",
+    "Collector",
+    "Arcane Student",
+    "Boss Breaker",
+    "Dragon's Shadow",
+    "A Helping Hand",
+    "Master Trader",
+    "Still Standing"
+]
 
-    title("CHAPTER IV — THE CAPITAL")
 
-    slow(
-        "Three days later, you reach the capital city of Valoria."
-        "\n\nIts walls are enormous."
-        "\n\nBut the city feels strangely quiet."
+def update_achievements():
+
+    if game["level"] >= 5:
+        unlock_achievement("Veteran of Eldoria")
+
+    if game["gold"] >= 500:
+        unlock_achievement("Well Funded")
+
+    if len(game["inventory"]) >= 8:
+        unlock_achievement("Collector")
+
+    if game["flags"].get("helped"):
+        unlock_achievement("A Helping Hand")
+
+    if game["hp"] > 0:
+        unlock_achievement("Still Standing")
+
+
+def show_achievements():
+
+    clear_choices()
+
+    update_achievements()
+
+    completed = len(game["achievements"])
+    total = len(ACHIEVEMENTS)
+
+    text = (
+        f"Achievements unlocked: "
+        f"{completed}/{total}\n\n"
     )
 
-    slow(
-        "\nSoldiers patrol every street."
-        "\n\nPosters cover the walls."
-    )
+    for achievement in ACHIEVEMENTS:
 
-    slow(
-        "\nWANTED."
-        "\n\nYOUR DESCRIPTION."
-    )
-
-    slow(
-        "\nSomeone has accused you of treason."
-    )
-
-    choice = choose(
-        "How do you enter the city?",
-        [
-            "Sneak through the sewer.",
-            "Bribe the gate guards.",
-            "Pretend to be a soldier.",
-            "Enter openly."
-        ]
-    )
-
-    if choice == 1:
-        game["cunning"] += 2
-        game["gold"] -= 5
-
-        slow(
-            "\nThe sewer smells like death."
-            "\n\nBut you reach the city unnoticed."
-        )
-
-    elif choice == 2:
-        if game["gold"] >= 10:
-            game["gold"] -= 10
-
-            slow(
-                "\nThe guards take your money."
-                "\n\n\"Welcome to Valoria,\" one says."
-            )
+        if achievement in game["achievements"]:
+            text += f"✓ {achievement}\n"
         else:
-            slow(
-                "\nYou don't have enough gold."
-                "\n\nYou have to find another way."
-            )
-            damage(game, 10)
+            text += f"○ {achievement}\n"
 
-    elif choice == 3:
-        game["cunning"] += 1
-
-        slow(
-            "\nYou steal a soldier's cloak."
-            "\n\nNobody questions you."
-        )
-
-    else:
-        game["honor"] += 2
-
-        slow(
-            "\nYou walk directly through the gate."
-            "\n\nA guard recognizes you."
-            "\n\nBefore he can raise the alarm, another soldier whispers:"
-            "\n\n\"Go. Quickly.\""
-        )
-
-    slow(
-        "\nInside the city, you discover three factions."
+    write_story(
+        "Achievements",
+        text
     )
 
-    slow(
-        "\nThe Crown Guard."
-        "\nThe Ashen Rebels."
-        "\nThe Wolf Company."
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_main_menu,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
     )
 
-    slow(
-        "\nEach claims to be fighting for the kingdom."
+    back.pack(
+        fill="x",
+        pady=8
     )
-
-    choice = choose(
-        "Who do you approach?",
-        [
-            "The Crown Guard.",
-            "The Ashen Rebels.",
-            "The Wolf Company.",
-            "None. Investigate alone."
-        ]
-    )
-
-    if choice == 1:
-        game["allied_crown"] = True
-
-        slow(
-            "\nThe Crown Guard takes you to their commander."
-            "\n\n\"If you truly possess evidence of treason,\" she says,"
-            "\n\"bring it to the palace.\""
-        )
-
-    elif choice == 2:
-        game["allied_rebels"] = True
-
-        slow(
-            "\nThe rebels bring you into an underground chamber."
-            "\n\nTheir leader removes his hood."
-        )
-
-        slow(
-            "\nIt is Prince Rowan."
-        )
-
-        slow(
-            "\n\"My father is alive,\" he says."
-            "\n\n\"And someone is trying to make sure he stays hidden.\""
-        )
-
-    elif choice == 3:
-        game["allied_wolves"] = True
-
-        slow(
-            "\nThe Wolf Company offers you a drink."
-            "\n\nTheir captain laughs."
-            "\n\n\"We don't care who wears the crown.\""
-            "\n\n\"We care who pays us.\""
-        )
-
-        game["gold"] += 15
-
-    else:
-        game["cunning"] += 1
-
-        slow(
-            "\nYou trust nobody."
-            "\n\nYou begin investigating the palace yourself."
-        )
-
-    pause()
 
 
 # ============================================================
-#                    CHAPTER 5
-# ============================================================
-
-def chapter_5(game):
-    game["chapter"] = 5
-
-    title("CHAPTER V — THE PALACE OF GLASS")
-
-    slow(
-        "That night, you enter the royal palace."
-        "\n\nThe palace is beautiful."
-        "\n\nAlmost too beautiful."
-    )
-
-    slow(
-        "\nEvery wall is covered in mirrors."
-        "\n\nEvery hallway seems to reflect another hallway."
-    )
-
-    slow(
-        "\nYou eventually reach the throne room."
-    )
-
-    slow(
-        "\nA man sits upon the throne."
-        "\n\nHe wears the crown of Valoria."
-    )
-
-    slow(
-        "\nHe looks exactly like King Aldric."
-    )
-
-    slow(
-        "\nBut you know the king is supposed to be dead."
-    )
-
-    choice = choose(
-        "What do you do?",
-        [
-            "Approach him.",
-            "Hide and observe.",
-            "Attack immediately.",
-            "Search the throne room."
-        ]
-    )
-
-    if choice == 1:
-        slow(
-            "\nYou step forward."
-            "\n\nThe king smiles."
-            "\n\n\"Finally.\""
-        )
-
-        slow(
-            "\n\"I've been waiting for you.\""
-        )
-
-    elif choice == 2:
-        game["cunning"] += 1
-
-        slow(
-            "\nYou hide behind a pillar."
-            "\n\nTwo ministers enter."
-            "\n\nThey kneel before the king."
-        )
-
-        slow(
-            "\n\"My lord Ash King,\" one says."
-        )
-
-        game["knows_secret"] = True
-
-    elif choice == 3:
-        game["strength"] += 1
-
-        slow(
-            "\nYou draw your weapon."
-            "\n\nThe king does not move."
-            "\n\n\"You really are your father's child.\""
-        )
-
-    else:
-        slow(
-            "\nYou search the room."
-            "\n\nBehind the throne, you discover a hidden door."
-        )
-
-        add_item(game, "Ancient Key")
-
-    slow(
-        "\nThe king rises."
-        "\n\n\"Do you know why you were brought here?\""
-    )
-
-    slow(
-        "\nYou realize something."
-        "\n\nThe stranger in Blackthorne."
-        "\nThe letter."
-        "\nThe missing knights."
-        "\nThe black crown."
-        "\n\nThey were all connected."
-    )
-
-    if game["has_letter"]:
-        slow(
-            "\nYou open the sealed letter."
-            "\n\nInside is a single sentence:"
-            "\n\n\"THE BLOOD OF THE OLD KINGS STILL RUNS IN YOUR VEINS.\""
-        )
-
-        game["knows_secret"] = True
-
-    slow(
-        "\nThe king removes his crown."
-        "\n\nHis face changes."
-        "\n\nNot magically."
-        "\n\nHis skin simply falls away like ash."
-    )
-
-    slow(
-        "\nBeneath it is a pale, ancient face."
-    )
-
-    slow(
-        "\n\"The kingdom was never meant for men,\" he says."
-    )
-
-    slow(
-        "\n\"It was built upon something older.\""
-    )
-
-    slow(
-        "\nThe floor shakes."
-    )
-
-    game["dragon_awakened"] = True
-
-    slow(
-        "\nSomething enormous moves beneath the palace."
-    )
-
-    pause()
-
-
-# ============================================================
-#                    CHAPTER 6
-# ============================================================
-
-def chapter_6(game):
-    game["chapter"] = 6
-
-    title("CHAPTER VI — WAR OF THE ASHEN CROWN")
-
-    slow(
-        "The capital erupts into chaos."
-        "\n\nThe palace burns."
-        "\n\nThe city gates close."
-    )
-
-    slow(
-        "\nThree armies clash beneath the walls."
-    )
-
-    slow(
-        "\nThe Crown Guard."
-        "\nThe Ashen Rebels."
-        "\nThe Wolf Company."
-    )
-
-    slow(
-        "\nAnd beneath them all..."
-        "\n\nSomething ancient wakes."
-    )
-
-    choice = choose(
-        "What is your priority?",
-        [
-            "Save the civilians.",
-            "Find Prince Rowan.",
-            "Find the Crown Guard commander.",
-            "Search for the source of the creature."
-        ]
-    )
-
-    if choice == 1:
-        game["honor"] += 2
-        game["saved_villager"] = True
-
-        slow(
-            "\nYou guide civilians through the burning streets."
-            "\n\nSeveral soldiers join you."
-            "\n\nBy dawn, hundreds have escaped."
-        )
-
-    elif choice == 2:
-        game["allied_rebels"] = True
-
-        slow(
-            "\nYou find Prince Rowan fighting in the western square."
-            "\n\n\"You're alive!\" he shouts."
-            "\n\n\"Then perhaps we're not doomed yet.\""
-        )
-
-    elif choice == 3:
-        game["allied_crown"] = True
-
-        slow(
-            "\nThe commander gives you a royal seal."
-            "\n\n\"If I die, take this to the northern fortress.\""
-        )
-
-        add_item(game, "Royal Seal")
-
-    else:
-        game["opened_crypt"] = True
-
-        slow(
-            "\nYou descend beneath the palace."
-            "\n\nAt the bottom is a gigantic stone door."
-            "\n\nA symbol has been carved into it."
-            "\n\nThe same split crown."
-        )
-
-        slow(
-            "\nBehind the door, something breathes."
-        )
-
-    slow(
-        "\nSuddenly, the palace tower collapses."
-    )
-
-    damage(game, 20)
-
-    slow(
-        "\nA black dragon rises from the ruins."
-        "\n\nIts scales glow like burning coal."
-    )
-
-    slow(
-        "\nIt looks directly at you."
-    )
-
-    slow(
-        "\nAnd kneels."
-    )
-
-    pause()
-
-
-# ============================================================
-#                    CHAPTER 7
-# ============================================================
-
-def chapter_7(game):
-    game["chapter"] = 7
-
-    title("CHAPTER VII — THE LAST KING")
-
-    slow(
-        "The dragon speaks."
-        "\n\nIts voice shakes the stones."
-    )
-
-    slow(
-        "\n\"Blood of Valen.\""
-    )
-
-    slow(
-        "\n\"You carry the mark.\""
-    )
-
-    slow(
-        "\nYou realize the truth."
-        "\n\nYour family was not merely noble."
-        "\n\nYour ancestors founded Valoria."
-        "\n\nAnd they made a pact with the creatures beneath the kingdom."
-    )
-
-    if game["knows_secret"]:
-        slow(
-            "\nThe whispers you heard in the forest finally make sense."
-        )
-
-    choice = choose(
-        "The dragon offers you a choice.",
-        [
-            "Command the dragon.",
-            "Destroy the ancient pact.",
-            "Accept the crown.",
-            "Ask the dragon for the truth."
-        ]
-    )
-
-    if choice == 1:
-        game["strength"] += 2
-
-        slow(
-            "\nYou place your hand upon the dragon's head."
-            "\n\n\"Serve me.\""
-        )
-
-        slow(
-            "\nThe dragon lowers its head."
-            "\n\n\"As you command, my king.\""
-        )
-
-    elif choice == 2:
-        game["honor"] += 2
-
-        slow(
-            "\n\"No more kings ruling through fear.\""
-            "\n\nThe dragon's eyes narrow."
-            "\n\n\"Then the pact must end.\""
-        )
-
-    elif choice == 3:
-        game["honor"] -= 1
-
-        slow(
-            "\nYou take the crown."
-            "\n\nThe entire kingdom falls silent."
-        )
-
-        slow(
-            "\nFor the first time in centuries, the crown recognizes "
-            "its true bloodline."
-        )
-
-    else:
-        game["cunning"] += 1
-
-        slow(
-            "\nYou ask the dragon why the pact was created."
-        )
-
-        slow(
-            "\nThe dragon tells you the first king feared invasion."
-            "\n\nHe traded freedom for protection."
-            "\n\nThe kingdom survived."
-            "\n\nBut every generation paid the price."
-        )
-
-    slow(
-        "\nA horn sounds in the distance."
-    )
-
-    slow(
-        "\nThe final armies are approaching."
-    )
-
-    slow(
-        "\nYou have one night to decide the fate of Valoria."
-    )
-
-    pause()
-
-
-# ============================================================
-#                    CHAPTER 8
-# ============================================================
-
-def chapter_8(game):
-    game["chapter"] = 8
-
-    title("CHAPTER VIII — DAWN OF VALORIA")
-
-    slow(
-        "The final battle begins before sunrise."
-        "\n\nThousands gather outside the capital."
-    )
-
-    slow(
-        "\nThe sky is red."
-        "\n\nThe dragon circles overhead."
-    )
-
-    if game["allied_rebels"]:
-        slow(
-            "\nPrince Rowan's rebels stand beside you."
-        )
-
-    if game["allied_crown"]:
-        slow(
-            "\nThe Crown Guard raises your banner."
-        )
-
-    if game["allied_wolves"]:
-        slow(
-            "\nThe Wolf Company waits for your command."
-        )
-
-    slow(
-        "\nAcross the field stands the Ash King."
-    )
-
-    slow(
-        "\nHe raises a black sword."
-        "\n\n\"Come, heir of Valen.\""
-    )
-
-    slow(
-        "\n\"Let us decide who deserves this kingdom.\""
-    )
-
-    choice = choose(
-        "How will you face the Ash King?",
-        [
-            "Fight him in single combat.",
-            "Lead your armies against him.",
-            "Use deception.",
-            "Try to convince him to surrender."
-        ]
-    )
-
-    if choice == 1:
-        if game["strength"] >= 3 or game["has_sword"]:
-            game["duel_won"] = True
-
-            slow(
-                "\nThe duel begins."
-                "\n\nSteel strikes steel."
-                "\n\nThe Ash King is faster than any human."
-            )
-
-            slow(
-                "\nBut you remember everything."
-                "\n\nBlackthorne."
-                "\nGreymarch."
-                "\nThe palace."
-                "\nThe dragon."
-            )
-
-            slow(
-                "\nYou strike the final blow."
-            )
-
-        else:
-            damage(game, 60)
-
-            slow(
-                "\nYou fight bravely."
-                "\n\nBut the Ash King overwhelms you."
-            )
-
-    elif choice == 2:
-        if game["honor"] >= 3 or game["allied_rebels"] or game["allied_crown"]:
-            game["duel_won"] = True
-
-            slow(
-                "\nYou raise your weapon."
-                "\n\nThousands of soldiers charge."
-                "\n\nThe battle shakes the valley."
-            )
-
-            slow(
-                "\nAt last, the Ash King's army breaks."
-            )
-
-        else:
-            damage(game, 50)
-
-            slow(
-                "\nYour forces are divided."
-                "\n\nThe battle becomes chaos."
-            )
-
-    elif choice == 3:
-        if game["cunning"] >= 3:
-            game["duel_won"] = True
-
-            slow(
-                "\nYou tell the Ash King that the dragon has abandoned him."
-            )
-
-            slow(
-                "\nHe turns."
-                "\n\nFor one second, he looks toward the sky."
-            )
-
-            slow(
-                "\nThat second is enough."
-            )
-
-            slow(
-                "\nYou strike."
-            )
-
-        else:
-            damage(game, 40)
-
-            slow(
-                "\nThe Ash King sees through your deception."
-            )
-
-    else:
-        slow(
-            "\nYou lower your weapon."
-            "\n\n\"This kingdom has suffered enough.\""
-        )
-
-        slow(
-            "\nThe Ash King laughs."
-        )
-
-        if game["honor"] >= 3:
-            slow(
-                "\nBut then something unexpected happens."
-                "\n\nThe soldiers lower their weapons."
-            )
-
-            slow(
-                "\nOne by one."
-            )
-
-            slow(
-                "\nThe Ash King's power was always built on fear."
-                "\n\nAnd fear has finally ended."
-            )
-
-            game["duel_won"] = True
-
-        else:
-            slow(
-                "\nThe Ash King attacks."
-            )
-
-            damage(game, 50)
-
-    determine_ending(game)
-
-
-# ============================================================
-#                    ENDINGS
-# ============================================================
-
-def determine_ending(game):
-
-    title("THE END")
-
-    if game["health"] <= 0:
-        ending = "FALLEN"
-        game["ending"] = ending
-
-        slow(
-            "Your vision fades."
-            "\n\nThe war continues without you."
-            "\n\nYears later, songs are still sung about the stranger "
-            "who tried to save Valoria."
-        )
-
-    elif game["duel_won"] and game["honor"] >= 5:
-        ending = "THE JUST KING"
-        game["ending"] = ending
-
-        slow(
-            "The Ash King falls."
-            "\n\nYou refuse the crown."
-            "\n\nInstead, you restore the ancient council and return power "
-            "to the people."
-        )
-
-        slow(
-            "\nThe dragon disappears into the northern mountains."
-            "\n\nFor the first time in centuries, Valoria is free."
-        )
-
-        slow(
-            "\nHistorians later call your reign the beginning of the "
-            "Golden Age."
-        )
-
-    elif game["duel_won"] and game["strength"] >= 4:
-        ending = "THE DRAGON KING"
-        game["ending"] = ending
-
-        slow(
-            "The Ash King falls."
-            "\n\nYou take the crown."
-            "\n\nThe dragon kneels."
-        )
-
-        slow(
-            "\nUnder your rule, no kingdom dares attack Valoria."
-            "\n\nYour armies become legendary."
-        )
-
-        slow(
-            "\nBut peace always has a price."
-        )
-
-    elif game["duel_won"] and game["cunning"] >= 4:
-        ending = "THE SHADOW CROWN"
-        game["ending"] = ending
-
-        slow(
-            "The Ash King dies believing he has won."
-            "\n\nOnly you know the truth."
-        )
-
-        slow(
-            "\nYou take control from the shadows."
-            "\n\nKings rule."
-            "\n\nCouncils argue."
-            "\n\nBut every important decision eventually reaches you."
-        )
-
-        slow(
-            "\nNo statue bears your name."
-            "\n\nNo song celebrates you."
-            "\n\nYet every ruler fears the whisper of the Shadow Crown."
-        )
-
-    elif game["duel_won"]:
-        ending = "THE RELUCTANT RULER"
-        game["ending"] = ending
-
-        slow(
-            "The war ends."
-            "\n\nThe people demand that you become king."
-        )
-
-        slow(
-            "\nYou accept."
-            "\n\nNot because you want power."
-            "\n\nBecause someone must rebuild what was destroyed."
-        )
-
-    else:
-        ending = "THE BROKEN KINGDOM"
-        game["ending"] = ending
-
-        slow(
-            "The Ash King survives."
-            "\n\nValoria fractures."
-        )
-
-        slow(
-            "\nThe rebels claim the west."
-            "\nThe Crown Guard controls the capital."
-            "\nThe Wolf Company rules the roads."
-        )
-
-        slow(
-            "\nYou disappear into the wilderness."
-            "\n\nSome say you became a mercenary."
-            "\nSome say you crossed the sea."
-            "\nOthers say you are still waiting for the right moment."
-        )
-
-    print()
-    print("=" * 72)
-    print(f"ENDING: {ending}".center(72))
-    print("=" * 72)
-
-    pause()
-
-
-# ============================================================
-#                    CHAPTER SELECT
+# CHAPTER SELECT
 # ============================================================
 
 def chapter_select():
 
-    while True:
-        title("CHAPTER SELECT")
+    clear_choices()
 
-        print("Choose a chapter to play from.")
-        print()
-        print("WARNING: Chapter Select starts that chapter with a")
-        print("default character setup. It is mainly for replaying scenes.")
-        print()
+    write_story(
+        "Chapter Select",
+        (
+            "Choose a chapter to replay.\n\n"
+            "Chapter Select creates a prepared character "
+            "so you can jump directly into later content."
+        )
+    )
 
-        choice = choose(
-            "Select a chapter:",
-            [
-                "Chapter I — The Bell of Blackthorne",
-                "Chapter II — The Hollowwood",
-                "Chapter III — The Black Crown",
-                "Chapter IV — The Capital",
-                "Chapter V — The Palace of Glass",
-                "Chapter VI — War of the Ashen Crown",
-                "Chapter VII — The Last King",
-                "Chapter VIII — Dawn of Valoria",
-                "Back"
-            ]
+    chapters = [
+        ("Chapter I", "intro"),
+        ("Chapter II", "chapter2"),
+        ("Chapter III", "chapter3"),
+        ("Chapter IV", "chapter4"),
+        ("Chapter V", "chapter5"),
+        ("Chapter VI", "chapter6"),
+        ("Chapter VII", "chapter7"),
+        ("Chapter VIII", "chapter8")
+    ]
+
+    for name, scene in chapters:
+
+        button = tk.Button(
+            choice_frame,
+            text=name,
+            command=lambda s=scene:
+            start_chapter(s),
+            font=BUTTON_FONT,
+            bg="#303030",
+            fg="white",
+            relief="flat",
+            padx=10,
+            pady=8
         )
 
-        if choice == 9:
-            return
-
-        game = new_game()
-
-        if choice >= 2:
-            game["name"] = "Adventurer"
-            game["has_sword"] = True
-            add_item(game, "Royal Knight's Sword")
-
-        if choice >= 3:
-            game["knows_secret"] = True
-            game["has_letter"] = True
-            add_item(game, "Sealed Letter")
-
-        if choice >= 4:
-            game["met_mara"] = True
-            game["trusted_mara"] = True
-
-        if choice >= 5:
-            game["allied_rebels"] = True
-
-        if choice >= 6:
-            game["dragon_awakened"] = True
-
-        if choice >= 7:
-            game["strength"] = 3
-            game["cunning"] = 3
-            game["honor"] = 3
-
-        if choice == 1:
-            chapter_1(game)
-
-        elif choice == 2:
-            chapter_2(game)
-
-        elif choice == 3:
-            chapter_3(game)
-
-        elif choice == 4:
-            chapter_4(game)
-
-        elif choice == 5:
-            chapter_5(game)
-
-        elif choice == 6:
-            chapter_6(game)
-
-        elif choice == 7:
-            chapter_7(game)
-
-        elif choice == 8:
-            chapter_8(game)
-
-        pause()
-
-
-# ============================================================
-#                    FULL GAME
-# ============================================================
-
-def play_game(game=None):
-
-    if game is None:
-        game = new_game()
-
-        title("KINGDOM OF ASH")
-
-        slow(
-            "Before the story begins, tell me your name."
+        button.pack(
+            fill="x",
+            pady=2
         )
 
-        name = input("\nName: ").strip()
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_main_menu,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
 
-        if not name:
-            name = "The Wanderer"
+    back.pack(
+        fill="x",
+        pady=8
+    )
 
-        game["name"] = name
 
-        title("KINGDOM OF ASH")
+def start_chapter(scene):
 
-        slow(
-            f"Your name is {game['name']}."
-            "\n\nYou are a wandering sellsword."
-            "\n\nYou have no title."
-            "\nNo castle."
-            "\nNo family name worth remembering."
-            "\n\nAt least, that is what you believe."
+    global game
+
+    game = new_game()
+
+    game["level"] = 5
+    game["max_hp"] = 160
+    game["hp"] = 160
+    game["max_mp"] = 80
+    game["mp"] = 80
+
+    game["strength"] = 18
+    game["defense"] = 12
+    game["magic"] = 12
+
+    game["gold"] = 500
+
+    add_item("Knight's Longsword")
+    add_item("Guard Armor")
+    add_item("Potion", 5)
+    add_item("Elixir", 2)
+    add_item("Mana Tonic", 3)
+
+    game["equipment"]["weapon"] = "Knight's Longsword"
+    game["equipment"]["armor"] = "Guard Armor"
+
+    game["spells"] = [
+        "Ember",
+        "Mending Light",
+        "Frost Lance",
+        "Thunder"
+    ]
+
+    show_scene(scene)
+
+
+# ============================================================
+# SETTINGS
+# ============================================================
+
+def show_settings():
+
+    clear_choices()
+
+    sound_status = (
+        "ON"
+        if game["settings"]["sound"]
+        else "OFF"
+    )
+
+    music_status = (
+        "ON"
+        if game["settings"]["music"]
+        else "OFF"
+    )
+
+    write_story(
+        "Settings",
+        (
+            "Game settings.\n\n"
+            f"Sound: {sound_status}\n"
+            f"Music: {music_status}\n\n"
+            "Audio support can be expanded later."
+        )
+    )
+
+    sound_button = tk.Button(
+        choice_frame,
+        text=f"Toggle Sound ({sound_status})",
+        command=toggle_sound,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
+
+    sound_button.pack(
+        fill="x",
+        pady=3
+    )
+
+    music_button = tk.Button(
+        choice_frame,
+        text=f"Toggle Music ({music_status})",
+        command=toggle_music,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
+
+    music_button.pack(
+        fill="x",
+        pady=3
+    )
+
+    back = tk.Button(
+        choice_frame,
+        text="← Back",
+        command=show_main_menu,
+        font=BUTTON_FONT,
+        bg="#303030",
+        fg="white",
+        relief="flat",
+        padx=10,
+        pady=8
+    )
+
+    back.pack(
+        fill="x",
+        pady=8
+    )
+
+
+def toggle_sound():
+
+    game["settings"]["sound"] = not game["settings"]["sound"]
+
+    show_settings()
+
+
+def toggle_music():
+
+    game["settings"]["music"] = not game["settings"]["music"]
+
+    show_settings()
+
+
+# ============================================================
+# MAIN MENU
+# ============================================================
+
+def show_main_menu():
+
+    clear_choices()
+
+    write_story(
+        "Kingdom of Ash",
+        (
+            "Welcome to Eldoria.\n\n"
+            "Your choices shape the story.\n"
+            "Your equipment changes how you fight.\n"
+            "Your decisions determine which ending you reach.\n\n"
+            "Choose an option below."
+        )
+    )
+
+    buttons = [
+        ("⚔ Start New Game", start_new_game),
+        ("▶ Continue", load_game),
+        ("📖 Chapter Select", chapter_select),
+        ("🎒 Inventory", show_inventory),
+        ("👥 Companions", show_companions),
+        ("🏆 Achievements", show_achievements),
+        ("🏘 Town / Shops", show_town),
+        ("⚙ Settings", show_settings),
+        ("💾 Save Game", save_game),
+        ("✕ Quit", quit_game)
+    ]
+
+    for text, command in buttons:
+
+        button = tk.Button(
+            choice_frame,
+            text=text,
+            command=command,
+            font=BUTTON_FONT,
+            bg="#303030",
+            fg="#eeeeee",
+            activebackground="#4a4a4a",
+            activeforeground="white",
+            relief="flat",
+            padx=15,
+            pady=8
         )
 
-        pause()
-
-    while game["chapter"] <= 8:
-
-        chapter = game["chapter"]
-
-        if chapter == 1:
-            chapter_1(game)
-
-        elif chapter == 2:
-            chapter_2(game)
-
-        elif chapter == 3:
-            chapter_3(game)
-
-        elif chapter == 4:
-            chapter_4(game)
-
-        elif chapter == 5:
-            chapter_5(game)
-
-        elif chapter == 6:
-            chapter_6(game)
-
-        elif chapter == 7:
-            chapter_7(game)
-
-        elif chapter == 8:
-            chapter_8(game)
-            break
-
-        game["chapter"] += 1
-
-        print()
-        save_game(game)
-
-
-# ============================================================
-#                    MAIN MENU
-# ============================================================
-
-def main_menu():
-
-    while True:
-
-        title("KINGDOM OF ASH")
-
-        print("                 A MEDIEVAL TEXT ADVENTURE")
-        print()
-        print("                 ─────────────────────")
-        print()
-
-        choice = choose(
-            "What would you like to do?",
-            [
-                "Start Game",
-                "Continue Game",
-                "Chapter Select",
-                "Quit"
-            ]
+        button.pack(
+            fill="x",
+            pady=3
         )
 
-        if choice == 1:
-            play_game()
 
-        elif choice == 2:
-            game = load_game()
+def start_new_game():
 
-            if game:
-                play_game(game)
+    global game
 
-        elif choice == 3:
-            chapter_select()
+    game = new_game()
 
-        elif choice == 4:
-            clear()
-            print("Thank you for playing Kingdom of Ash.")
-            print()
-            print("The kingdom remembers...")
-            print()
-            break
+    show_scene("intro")
+
+
+def quit_game():
+
+    result = messagebox.askyesno(
+        "Quit",
+        "Are you sure you want to quit?"
+    )
+
+    if result:
+        root.destroy()
 
 
 # ============================================================
-#                    START GAME
+# START GAME
 # ============================================================
 
-if __name__ == "__main__":
-    main_menu()
+update_stats()
+
+show_main_menu()
+
+root.mainloop()
